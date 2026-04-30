@@ -1,0 +1,13 @@
+{
+  "name": "electiq-monorepo",
+  "version": "1.0.0",
+  "description": "ElectIQ – Election Intelligence Assistant",
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "start:frontend": "npm run dev --prefix frontend",
+    "start:backend": "npm start --prefix backend",
+    "install:all": "npm install --prefix frontend && npm install --prefix backend",
+    "build": "npm run build --prefix frontend"
+  }
+}

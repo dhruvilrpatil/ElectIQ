@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ElectIQ – Your AI-powered Election Intelligence Assistant for India. Get clear, trustworthy guidance on voter registration, election timelines, voting methods, and more based on ECI 2024-2029 standards." />
+    <meta name="theme-color" content="#1A73E8" />
+    <meta property="og:title" content="ElectIQ – Indian Election Intelligence Assistant" />
+    <meta property="og:description" content="Understand every vote, every step. AI-powered guide to Indian elections, built on ECI guidelines." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>ElectIQ – Election Intelligence Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;700&family=Google+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- ─── Google Analytics 4 ──────────────────────────────────────────── -->
+    <script>
+      (function() {
+        var id = '%VITE_GA4_MEASUREMENT_ID%';
+        if (!id || id === 'G-XXXXXXXXXX' || id.indexOf('%') === 0) return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id;
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function() { window.dataLayer.push(arguments); };
+        window.gtag('js', new Date());
+        window.gtag('config', id, { send_page_view: false });
+      })();
+    </script>
+
+    <!-- ─── Google Translate Widget ────────────────────────────────────── -->
+    <!--
+      Translates the entire page DOM using Google's free translation service.
+      The ElectIQ sidebar language selector calls window.__electiqSetLang(code)
+      to programmatically switch languages without the user touching the widget.
+    -->
+    <script>
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement(
+          {
+            pageLanguage: 'en',
+            includedLanguages: 'hi,bn,te,mr,ta,gu,ur,kn,or,pa,ml,as,ne,sd',
+            layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: false,
+          },
+          'google_translate_element'
+        );
+      }
+
+      /**
+       * Called by the React sidebar language selector.
+       * Maps an ISO 639-1 code to the Google Translate cookie value and applies it.
+       */
+      window.__electiqSetLang = function(langCode) {
+        if (langCode === 'en') {
+          // Restore original — remove the translation cookie
+          var cookie = document.cookie.split(';').find(function(c) {
+            return c.trim().startsWith('googtrans=');
+          });
+          if (cookie) {
+            document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + location.hostname + ';';
+          }
+          location.reload();
+          return;
+        }
+
+        // Set the googtrans cookie that Google Translate reads
+        var cookieVal = '/en/' + langCode;
+        document.cookie = 'googtrans=' + cookieVal + '; path=/';
+        document.cookie = 'googtrans=' + cookieVal + '; path=/; domain=' + location.hostname;
+
+        // If the widget's <select> is already rendered, use it (avoids full reload)
+        var select = document.querySelector('.goog-te-combo');
+        if (select) {
+          select.value = langCode;
+          select.dispatchEvent(new Event('change'));
+        } else {
+          location.reload();
+        }
+      };
+    </script>
+    <script async src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <!-- Hide the Google Translate toolbar banner that appears at the top -->
+    <style>
+      body { top: 0 !important; }
+      .goog-te-banner-frame { display: none !important; }
+      #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+      #google_translate_element { display: none; }
+    </style>
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <!-- Hidden translate widget mount point -->
+    <div id="google_translate_element" aria-hidden="true"></div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
