@@ -12,3 +12,4 @@ logs/
 coverage/
 *.tmp
 .cache/
+package-lock.json
