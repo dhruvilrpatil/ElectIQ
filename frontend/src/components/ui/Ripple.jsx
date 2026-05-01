@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import styles from './Ripple.module.css';
 
 function Ripple({ children, className = '', ...props }) {

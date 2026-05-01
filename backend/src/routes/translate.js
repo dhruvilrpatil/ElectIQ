@@ -13,7 +13,7 @@ const translateRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.post('/', translateRateLimiter, async (req, res, next) => {
+router.post('/', translateRateLimiter, async (req, res) => {
   try {
     const { text, targetLang } = req.body;
 

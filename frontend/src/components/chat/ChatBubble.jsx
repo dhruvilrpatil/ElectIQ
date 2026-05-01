@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useChatStore from '@/store/chatStore';
 import apiService from '@/services/api';
@@ -32,13 +32,17 @@ function useTypewriter(text, speed = 12, enabled = true) {
 
   useEffect(() => {
     if (!enabled || !text) {
-      setDisplayed(text || '');
-      setIsDone(true);
-      return;
+      const timer = setTimeout(() => {
+        setDisplayed(text || '');
+        setIsDone(true);
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
-    setDisplayed('');
-    setIsDone(false);
+    setTimeout(() => {
+      setDisplayed('');
+      setIsDone(false);
+    }, 0);
     let i = 0;
 
     intervalRef.current = setInterval(() => {
@@ -232,11 +236,12 @@ function TranslatedBadge({ message }) {
   }, [message.content, message.headline, selectedLanguage, translated, translating]);
 
   // Auto-trigger translation when language changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (shouldTranslate && !translated && !translating) {
-      handleTranslate();
+      const timer = setTimeout(handleTranslate, 0);
+      return () => clearTimeout(timer);
     }
-  }, [selectedLanguage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedLanguage, shouldTranslate, translated, translating, handleTranslate]);
 
   if (!shouldTranslate) return null;
 
@@ -261,10 +266,30 @@ function TranslatedBadge({ message }) {
 function ChatBubble({ message, onFollowUpClick }) {
   const isUser = message.role === 'user';
   const isStructured = !isUser && (message.headline || (message.steps && message.steps.length > 0));
-  const isNew = useRef(Date.now() - new Date(message.timestamp).getTime() < 2000);
+  
+  // Use a state for shouldAnimate to avoid impurity in render
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  useEffect(() => {
+    if (!isUser && Date.now() - new Date(message.timestamp).getTime() < 2000) {
+      setTimeout(() => setShouldAnimate(true), 0);
+    }
+  }, [isUser, message.timestamp]);
+
+  const [fetchedVideos, setFetchedVideos] = useState(message.videos || null);
+
+  useEffect(() => {
+    if (isStructured && !fetchedVideos && message.headline) {
+      apiService.getYoutubeVideos(message.headline)
+        .then(data => {
+          if (data && data.length > 0) {
+            setFetchedVideos(data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isStructured, message.headline, fetchedVideos]);
 
   // Typewriter effect — only for NEW assistant messages
-  const shouldAnimate = !isUser && isNew.current;
   const { displayed: animatedBody, isDone, skip } = useTypewriter(
     message.content || '',
     10,
@@ -338,11 +363,12 @@ function ChatBubble({ message, onFollowUpClick }) {
               </motion.div>
             )}
 
-            {isDone && message.videos && message.videos.length > 0 && (
+            {/* Videos */}
+            {isDone && fetchedVideos && fetchedVideos.length > 0 && (
               <div className={styles.videos}>
                 <span className={styles.videosLabel}>Recommended Videos:</span>
                 <div className={styles.videoGrid}>
-                  {message.videos.map((vid, i) => (
+                  {fetchedVideos.map((vid, i) => (
                     <div key={i} className={styles.videoWrapper}>
                       <iframe
                         className={styles.videoFrame}

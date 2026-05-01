@@ -1,4 +1,3 @@
-import React from 'react';
 import styles from './Button.module.css';
 
 function Button({ variant = 'filled', size = 'medium', icon, loading = false, disabled = false, onClick, children, className = '', type = 'button', ...props }) {

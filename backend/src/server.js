@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import { config } from './config/env.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -15,16 +15,37 @@ import stateRoutes from './routes/states.js';
 import healthRoutes from './routes/health.js';
 import translateRoutes from './routes/translate.js';
 import searchRoutes from './routes/search.js';
+import youtubeRoutes from './routes/youtube.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = config.port;
 
 // Trust the reverse proxy (Cloud Run) so rate limiters and real IP resolution work
 app.set('trust proxy', 1);
 
 // Security & performance middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // Disabling CSP to ensure Google Maps, Translate, and other Google widgets work without being blocked.
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  frameguard: {
+    action: 'deny', // Will be overridden per route if needed, or we just keep it deny since API shouldn't be framed
+  },
+  referrerPolicy: {
+    policy: 'strict-origin-when-cross-origin',
+  },
+  noSniff: true,
 }));
 app.use(compression());
 app.use(cors(corsOptions));
@@ -44,6 +65,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/states', stateRoutes);
 app.use('/api/translate', translateRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/youtube', youtubeRoutes);
 
 // 404 handler for API routes
 app.use('/api', (req, res) => {

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useChatStore from '@/store/chatStore';
-import apiService from '@/services/api';
+
 import { trackEvent } from '@/hooks/useAnalytics';
 import styles from './Sidebar.module.css';
 
@@ -38,26 +38,7 @@ const NAV = [
   { path: '/settings', label: 'Settings', icon: 'settings' },
 ];
 
-/**
- * Language options with native script labels.
- */
-const LANGUAGE_OPTIONS = [
-  { code: 'en', label: 'English', native: 'English', flag: '🇬🇧' },
-  { code: 'hi', label: 'Hindi', native: 'हिंदी', flag: '🇮🇳' },
-  { code: 'bn', label: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
-  { code: 'te', label: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
-  { code: 'mr', label: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
-  { code: 'ta', label: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
-  { code: 'gu', label: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
-  { code: 'ur', label: 'Urdu', native: 'اردو', flag: '🇮🇳' },
-  { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳' },
-  { code: 'or', label: 'Odia', native: 'ଓଡ଼ିଆ', flag: '🇮🇳' },
-  { code: 'pa', label: 'Punjabi', native: 'ਪੰਜਾਬੀ', flag: '🇮🇳' },
-  { code: 'ml', label: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' },
-  { code: 'as', label: 'Assamese', native: 'অসমীয়া', flag: '🇮🇳' },
-  { code: 'ne', label: 'Nepali', native: 'नेपाली', flag: '🇮🇳' },
-  { code: 'sd', label: 'Sindhi', native: 'سنڌي', flag: '🇮🇳' },
-];
+import { LANGUAGE_OPTIONS } from '../../utils/constants';
 
 /* Logo mark */
 function Logo({ expanded }) {

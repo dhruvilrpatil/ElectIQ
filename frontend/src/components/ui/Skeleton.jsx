@@ -1,4 +1,3 @@
-import React from 'react';
 import styles from './Skeleton.module.css';
 
 function Skeleton({ width, height, variant = 'rectangular', className = '' }) {

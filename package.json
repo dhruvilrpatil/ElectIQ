@@ -1,6 +1,7 @@
 {
   "name": "electiq-monorepo",
   "version": "1.0.0",
+  "type": "module",
   "description": "ElectIQ – Election Intelligence Assistant",
   "scripts": {
     "dev:frontend": "npm run dev --prefix frontend",
@@ -8,6 +9,14 @@
     "start:frontend": "npm run dev --prefix frontend",
     "start:backend": "npm start --prefix backend",
     "install:all": "npm install --prefix frontend && npm install --prefix backend",
-    "build": "npm run build --prefix frontend"
+    "build": "npm run build --prefix frontend",
+    "lint": "eslint \"backend/src/**/*.js\" \"frontend/src/**/*.{js,jsx}\""
+  },
+  "devDependencies": {
+    "eslint": "9.39.4",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "prettier": "3.8.3"
   }
 }

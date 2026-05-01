@@ -2,11 +2,7 @@
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import logger from '../middleware/logger.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const SYSTEM_PROMPT = `You are ElectIQ — the official AI guide to Indian elections, built in compliance with Election Commission of India (ECI) guidelines.
 Base ALL answers strictly on:
@@ -81,12 +77,19 @@ if (clients.length === 0) {
 /**
  * Send a message to Gemini and parse the JSON response.
  * Tries every client × model combination until one succeeds.
+ * @param {string} userMessage - The user's query
+ * @param {string} [context=null] - Optional conversation context
+ * @param {string} [languageCode='en'] - Optional language code for response
+ * @returns {Promise<Object>} The parsed AI response
  */
-export async function chat(userMessage, context = null) {
+export async function chat(userMessage, context = null, languageCode = 'en') {
   const contextHint = context && context !== 'default'
     ? `\n[Conversation context: user was asking about "${context}"]`
     : '';
-  const prompt = userMessage + contextHint;
+  const langHint = languageCode && languageCode !== 'en' 
+    ? `\nCRITICAL INSTRUCTION: You MUST respond in the language corresponding to the language code '${languageCode}'.`
+    : '';
+  const prompt = userMessage + contextHint + langHint;
 
   for (const { label, client } of clients) {
     for (const modelName of MODELS) {

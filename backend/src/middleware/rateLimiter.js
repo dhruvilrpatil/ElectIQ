@@ -15,8 +15,8 @@ export const rateLimiter = rateLimit({
 });
 
 export const chatRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // Limit each IP to 10 chat requests per minute
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 chat requests per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {

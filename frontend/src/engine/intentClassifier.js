@@ -13,9 +13,6 @@ const INDIA_STATE_CODES = {
   'DL': 'Delhi', 'CH': 'Chandigarh', 'LA': 'Ladakh',
 };
 
-function tokenize(input) {
-  return input.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
-}
 
 export function classifyIntent(input, context = null) {
   const inputLower = input.toLowerCase();

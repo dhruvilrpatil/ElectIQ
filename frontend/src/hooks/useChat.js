@@ -11,7 +11,7 @@ function randomDelay() {
 }
 
 export function useChat() {
-  const { addMessage, setLoading, setContext, context, isLoading } = useChatStore();
+  const { addMessage, setLoading, setContext, context, isLoading, selectedLanguage } = useChatStore();
   const [inputValue, setInputValue] = useState('');
 
   const sendMessage = useCallback(async (content) => {
@@ -31,10 +31,11 @@ export function useChat() {
 
       // Try backend first
       try {
-        const result = await apiService.sendChat(trimmed, context);
+        const result = await apiService.sendChat(trimmed, context, selectedLanguage);
         response = result.response;
         if (result.intent) setContext(result.intent);
       } catch (networkErr) {
+        console.error('Network error, falling back to NLP', networkErr);
         // Fall back to frontend NLP engine
         await new Promise((r) => setTimeout(r, delay));
         const nlpResult = processInput(trimmed, context);
@@ -53,6 +54,7 @@ export function useChat() {
         intent: response.intent,
       });
     } catch (err) {
+      console.error('Chat error:', err);
       addMessage({
         role: 'assistant',
         content: 'I\'m having trouble processing that request. Please try again or rephrase your question.',
@@ -61,7 +63,7 @@ export function useChat() {
     } finally {
       setLoading(false);
     }
-  }, [addMessage, setLoading, setContext, context, isLoading]);
+  }, [addMessage, setLoading, setContext, context, isLoading, selectedLanguage]);
 
   const handleInputChange = useCallback((val) => {
     setInputValue(val);

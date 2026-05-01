@@ -13,7 +13,7 @@ const searchRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.get('/', searchRateLimiter, async (req, res, next) => {
+router.get('/', searchRateLimiter, async (req, res) => {
   try {
     const { q } = req.query;
 

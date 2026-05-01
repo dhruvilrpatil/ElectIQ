@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import styles from './LearnPage.module.css';
 
 const SVG = {
@@ -220,7 +220,7 @@ export default function LearnPage() {
           aria-label="Search glossary"
         />
         {filteredGloss.length === 0 ? (
-          <p className={styles.noResults}>No terms match "{glossSearch}"</p>
+          <p className={styles.noResults}>No terms match &quot;{glossSearch}&quot;</p>
         ) : (
           <div className={styles.glossList}>
             {filteredGloss.map((g) => <GlossaryItem key={g.term} term={g.term} def={g.def} />)}

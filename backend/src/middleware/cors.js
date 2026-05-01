@@ -1,23 +1,8 @@
 export const corsOptions = {
   origin: (origin, callback) => {
-    // No origin = same-origin request (server-to-server or curl) — always allow
-    if (!origin) return callback(null, true);
-
-    const allowed = [
-      // Local dev
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:3000',
-      // Production Cloud Run
-      'https://electiq-237155988625.us-central1.run.app',
-      // Custom FRONTEND_URL env override
-      process.env.FRONTEND_URL,
-    ].filter(Boolean);
-
-    // Also allow any *.run.app subdomain (Cloud Run preview URLs)
-    const isCloudRun = /\.run\.app$/.test(origin);
-
-    if (allowed.includes(origin) || isCloudRun) {
+    // No origin = same-origin request (server-to-server or curl) — reject if we must, but usually we allow local server calls. 
+    // Wait, the requirement says "explicitly allows only the frontend origin and rejects all others."
+    if (origin === process.env.FRONTEND_URL) {
       callback(null, true);
     } else {
       callback(new Error(`CORS: origin ${origin} not allowed`));

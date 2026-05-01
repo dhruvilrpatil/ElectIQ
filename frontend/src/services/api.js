@@ -9,8 +9,8 @@ const client = axios.create({
 });
 
 const apiService = {
-  async sendChat(message, context = null) {
-    const { data } = await client.post('/api/chat', { message, context });
+  async sendChat(message, context = null, languageCode = 'en') {
+    const { data } = await client.post('/api/chat', { message, context, languageCode });
     return data;
   },
   async getStates() {
@@ -54,6 +54,16 @@ const apiService = {
    */
   async searchSources(query, lang = 'en') {
     const { data } = await client.get('/api/search', { params: { q: query, lang } });
+    return data;
+  },
+
+  /**
+   * Fetch educational YouTube videos for a topic.
+   * @param {string} query
+   * @returns {Promise<Array>}
+   */
+  async getYoutubeVideos(query) {
+    const { data } = await client.get('/api/youtube', { params: { q: query } });
     return data;
   },
 };

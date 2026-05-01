@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 const useChatStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       messages: [],
       context: null,
       isLoading: false,

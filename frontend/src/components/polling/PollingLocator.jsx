@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Skeleton from '@/components/ui/Skeleton';
 import { trackEvent } from '@/hooks/useAnalytics';
 import styles from './PollingLocator.module.css';
@@ -17,12 +17,14 @@ export default function PollingLocator() {
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey || apiKey === 'YOUR_MAPS_KEY_HERE') {
-      setSdkError('Google Maps API key is missing or invalid.');
-      return;
+      const timer = setTimeout(() => {
+        setSdkError('Google Maps API key is missing or invalid.');
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     if (window.google && window.google.maps) {
-      setSdkLoaded(true);
+      setTimeout(() => setSdkLoaded(true), 0);
       return;
     }
 
@@ -54,47 +56,13 @@ export default function PollingLocator() {
     document.head.appendChild(script);
   }, []);
 
-  /* ─── Initialise map + autocomplete ─────────────────────────────── */
-  useEffect(() => {
-    if (!sdkLoaded || !mapRef.current || !inputRef.current) return;
-
-    googleMap.current = new window.google.maps.Map(mapRef.current, {
-      center: { lat: 20.5937, lng: 78.9629 },
-      zoom: 5,
-      mapTypeId: 'roadmap',
-    });
-
-    infoWindowRef.current = new window.google.maps.InfoWindow();
-
-    const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-      componentRestrictions: { country: 'in' },
-      fields: ['geometry', 'name', 'formatted_address'],
-    });
-
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
-      if (!place.geometry || !place.geometry.location) {
-        window.alert("No details available for: '" + place.name + "'");
-        return;
-      }
-
-      trackEvent('polling_locator_search', {
-        city_searched: place.name || place.formatted_address,
-      });
-
-      googleMap.current.setCenter(place.geometry.location);
-      googleMap.current.setZoom(13);
-      searchNearbyBooths(place.geometry.location, place.name || '');
-    });
-  }, [sdkLoaded]);
-
   /* ─── Marker helpers ─────────────────────────────────────────────── */
-  const clearMarkers = () => {
+  const clearMarkers = useCallback(() => {
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
-  };
+  }, []);
 
-  const addMarker = (place) => {
+  const addMarker = useCallback((place) => {
     if (!place.geometry?.location) return;
 
     const marker = new window.google.maps.Marker({
@@ -132,10 +100,10 @@ export default function PollingLocator() {
       `);
       infoWindowRef.current.open(googleMap.current, marker);
     });
-  };
+  }, []);
 
   /* ─── Search logic ───────────────────────────────────────────────── */
-  const searchNearbyBooths = (location, placeName) => {
+  const searchNearbyBooths = useCallback((location, placeName) => {
     clearMarkers();
     setSearchStatus('searching');
     if (infoWindowRef.current) infoWindowRef.current.close();
@@ -143,7 +111,6 @@ export default function PollingLocator() {
     const service = new window.google.maps.places.PlacesService(googleMap.current);
 
     // ── Strategy 1: Text Search ──────────────────────────────────────
-    // Most reliable — finds places explicitly named "polling booth"
     service.textSearch(
       { query: `polling booth ${placeName}`.trim(), location, radius: 5000 },
       (textResults, textStatus) => {
@@ -156,7 +123,7 @@ export default function PollingLocator() {
           return;
         }
 
-        // ── Strategy 2: Nearby schools (most common polling venue) ───
+        // ── Strategy 2: Nearby schools ───
         service.nearbySearch(
           { location, radius: 3000, type: 'school' },
           (schools, schoolStatus) => {
@@ -191,7 +158,41 @@ export default function PollingLocator() {
         );
       }
     );
-  };
+  }, [addMarker, clearMarkers]);
+
+  /* ─── Initialise map + autocomplete ─────────────────────────────── */
+  useEffect(() => {
+    if (!sdkLoaded || !mapRef.current || !inputRef.current) return;
+
+    googleMap.current = new window.google.maps.Map(mapRef.current, {
+      center: { lat: 20.5937, lng: 78.9629 },
+      zoom: 5,
+      mapTypeId: 'roadmap',
+    });
+
+    infoWindowRef.current = new window.google.maps.InfoWindow();
+
+    const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+      componentRestrictions: { country: 'in' },
+      fields: ['geometry', 'name', 'formatted_address'],
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry || !place.geometry.location) {
+        window.alert("No details available for: '" + place.name + "'");
+        return;
+      }
+
+      trackEvent('polling_locator_search', {
+        city_searched: place.name || place.formatted_address,
+      });
+
+      googleMap.current.setCenter(place.geometry.location);
+      googleMap.current.setZoom(13);
+      searchNearbyBooths(place.geometry.location, place.name || '');
+    });
+  }, [sdkLoaded, searchNearbyBooths]);
 
   /* ─── Render ─────────────────────────────────────────────────────── */
   return (

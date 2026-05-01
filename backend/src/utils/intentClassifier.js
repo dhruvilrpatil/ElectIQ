@@ -1,8 +1,6 @@
 import knowledgeBase from '../data/knowledgeBase.js';
 
-function tokenize(input) {
-  return input.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
-}
+
 
 export function classifyIntent(input, context = null) {
   const inputLower = input.toLowerCase();

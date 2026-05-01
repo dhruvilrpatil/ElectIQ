@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import useChatStore from '@/store/chatStore';
 import useChat from '@/hooks/useChat';

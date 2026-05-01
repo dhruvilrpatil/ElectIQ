@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from '@/components/layout/Sidebar';
@@ -63,6 +63,9 @@ export default function App() {
 
   return (
     <div className="app-layout">
+      {/* Accessibility: Skip to Content */}
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+
       {/* Sidebar — hover-expands on desktop, bottom-tab on mobile */}
       <div className="app-sidebar-area">
         <Sidebar />
