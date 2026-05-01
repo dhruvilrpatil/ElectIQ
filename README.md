@@ -5,6 +5,8 @@
 
 *Empowering every Indian citizen to participate fully in democracy — from first-time voters in rural Maharashtra to seasoned political observers in metro cities.*
 
+**[Live Demo →](https://electiq-237155988625.us-central1.run.app/)**
+
 [![Node.js](https://img.shields.io/badge/Node.js-v18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![Gemini](https://img.shields.io/badge/Google_Gemini-Flash-4285F4?style=flat-square&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
