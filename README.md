@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ ElectIQ
+# ElectIQ
 ### Indian Election Intelligence Assistant
 
 *Empowering every Indian citizen to participate fully in democracy — from first-time voters in rural Maharashtra to seasoned political observers in metro cities.*
