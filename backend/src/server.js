@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 
+import { validateEnv } from './config/env.js';
 import { corsOptions } from './middleware/cors.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -15,6 +16,10 @@ import stateRoutes from './routes/states.js';
 import healthRoutes from './routes/health.js';
 import translateRoutes from './routes/translate.js';
 import searchRoutes from './routes/search.js';
+import youtubeRoutes from './routes/youtube.js';
+
+// Validate environment variables at startup
+validateEnv();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -23,9 +28,32 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1);
 
 // Security & performance middleware
-app.use(helmet({
-  contentSecurityPolicy: false, // Disabling CSP to ensure Google Maps, Translate, and other Google widgets work without being blocked.
-}));
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        frameSrc: ['https://www.youtube.com', 'https://www.youtube-nocookie.com'],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    noSniff: true,
+    xFrameOptions: { action: 'deny' },
+  })
+);
 app.use(compression());
 app.use(cors(corsOptions));
 
@@ -44,6 +72,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/states', stateRoutes);
 app.use('/api/translate', translateRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/youtube', youtubeRoutes);
 
 // 404 handler for API routes
 app.use('/api', (req, res) => {
@@ -72,23 +101,26 @@ if (process.env.NODE_ENV === 'production') {
 // Global error handler
 app.use(errorHandler);
 
-// Start server
-const server = app.listen(PORT, () => {
-  logger.info(`🗳  ElectIQ API running on http://localhost:${PORT}`);
-  logger.info(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-});
-
-// Graceful shutdown
-function shutdown(signal) {
-  logger.info(`${signal} received — shutting down gracefully`);
-  server.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
+// Start server only when not in test environment
+let server;
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    logger.info(`🗳  ElectIQ API running on http://localhost:${PORT}`);
+    logger.info(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   });
-  setTimeout(() => { logger.error('Force exit'); process.exit(1); }, 10000);
-}
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+  // Graceful shutdown
+  function shutdown(signal) {
+    logger.info(`${signal} received — shutting down gracefully`);
+    server.close(() => {
+      logger.info('Server closed');
+      process.exit(0);
+    });
+    setTimeout(() => { logger.error('Force exit'); process.exit(1); }, 10000);
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
 
 export default app;

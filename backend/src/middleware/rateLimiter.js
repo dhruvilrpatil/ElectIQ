@@ -1,8 +1,13 @@
 import rateLimit from 'express-rate-limit';
+import { RATE_LIMITS } from '../config/constants.js';
 
+/**
+ * Global rate limiter applied to all /api/ routes.
+ * Limits each IP to 100 requests per 15-minute window.
+ */
 export const rateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: RATE_LIMITS.GLOBAL_WINDOW_MS,
+  max: RATE_LIMITS.GLOBAL_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
@@ -14,9 +19,13 @@ export const rateLimiter = rateLimit({
   },
 });
 
+/**
+ * Stricter rate limiter for the /api/chat endpoint.
+ * Limits each IP to 20 chat requests per 15-minute window.
+ */
 export const chatRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // Limit each IP to 10 chat requests per minute
+  windowMs: RATE_LIMITS.CHAT_WINDOW_MS,
+  max: RATE_LIMITS.CHAT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {

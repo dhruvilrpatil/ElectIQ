@@ -4,24 +4,16 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import logger from '../middleware/logger.js';
+import {
+  GEMINI_MODELS,
+  VERTEX_AI_LOCATION,
+  DEFAULT_GCP_PROJECT,
+  SYSTEM_PROMPT,
+  ECI_URLS,
+} from '../config/constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const SYSTEM_PROMPT = `You are ElectIQ — the official AI guide to Indian elections, built in compliance with Election Commission of India (ECI) guidelines.
-Base ALL answers strictly on:
-1. Representation of the People Act, 1951 (as amended through 2024)
-2. ECI notifications and circulars from 2024 General Election (Lok Sabha 18th)
-3. Current voter portal: voters.eci.gov.in
-4. e-EPIC as the primary digital voter ID standard
-5. Lok Sabha 2024: 7 phases (April 19 – June 1), Results: June 4, 2024. NDA won 293 seats. Next General Election: 2029.
-
-Always recommend users verify at voters.eci.gov.in or call 1950.
-Never speculate. Be neutral. Do not comment on political parties or candidates.
-Respond ONLY as valid JSON (no markdown fences): {"headline":"...","body":"...","steps":[],"actions":[{"label":"...","url":"..."}],"followUps":[]}`;
-
-// Models to try in order of preference
-const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-001'];
 
 /* ─── Resolve service-account credentials to absolute path ─────────── */
 const rawCredPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
@@ -38,7 +30,7 @@ if (rawCredPath) {
 }
 
 /* ─── Read project ID from service-account key ─────────────────────── */
-let vertexProjectId = process.env.GOOGLE_CLOUD_PROJECT || 'electiq-494420';
+let vertexProjectId = process.env.GOOGLE_CLOUD_PROJECT || DEFAULT_GCP_PROJECT;
 try {
   const credFile = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (credFile && fs.existsSync(credFile)) {
@@ -54,7 +46,7 @@ try {
   const vertexClient = new GoogleGenAI({
     vertexai: true,
     project: vertexProjectId,
-    location: 'us-central1',
+    location: VERTEX_AI_LOCATION,
   });
   clients.push({ label: 'VertexAI', client: vertexClient });
   logger.info('Gemini: Vertex AI client ready', { project: vertexProjectId });
@@ -81,6 +73,11 @@ if (clients.length === 0) {
 /**
  * Send a message to Gemini and parse the JSON response.
  * Tries every client × model combination until one succeeds.
+ *
+ * @param {string} userMessage - The sanitized user message.
+ * @param {string|null} [context] - Optional conversation context hint.
+ * @returns {Promise<Object>} Parsed JSON response from Gemini.
+ * @throws {Error} If all Gemini backends fail.
  */
 export async function chat(userMessage, context = null) {
   const contextHint = context && context !== 'default'
@@ -89,7 +86,7 @@ export async function chat(userMessage, context = null) {
   const prompt = userMessage + contextHint;
 
   for (const { label, client } of clients) {
-    for (const modelName of MODELS) {
+    for (const modelName of GEMINI_MODELS) {
       try {
         const result = await client.models.generateContent({
           model: modelName,
@@ -115,7 +112,7 @@ export async function chat(userMessage, context = null) {
             headline: 'ElectIQ',
             body: rawText.trim(),
             steps: [],
-            actions: [{ label: 'Verify at ECI', url: 'https://voters.eci.gov.in' }],
+            actions: [{ label: 'Verify at ECI', url: ECI_URLS.VOTER_PORTAL }],
             followUps: [],
           };
         }
@@ -132,6 +129,11 @@ export async function chat(userMessage, context = null) {
   throw new Error('All Gemini backends failed. Check API key quota and Vertex AI access.');
 }
 
+/**
+ * Returns whether any Gemini client is available.
+ *
+ * @returns {boolean} True if at least one client is configured.
+ */
 export const isAvailable = () => clients.length > 0;
 
 export default { chat, isAvailable };
