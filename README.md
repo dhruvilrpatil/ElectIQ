@@ -200,7 +200,7 @@ npm run start:backend
 
 ## 👥 Team
 
-Built by **Team ElectIQ** — MPSTME, Mumbai.
+Built by **Team ElectIQ** — SBMP, Mumbai.
 
 | Name | GitHub |
 |---|---|
