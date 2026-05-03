@@ -3,6 +3,12 @@ import { classifyIntent } from './intentClassifier';
 
 const responseRotation = {};
 
+/**
+ * Processes the user input using intent classification to retrieve the appropriate knowledge base response.
+ * @param {string} userInput - The user's input string.
+ * @param {string|null} [context=null] - Optional context from a previous turn.
+ * @returns {Object} An object containing the matched intent and formatted response.
+ */
 export function processInput(userInput, context = null) {
   if (!userInput?.trim()) {
     return { intent: 'default', response: knowledgeBase.default.responses[0] };

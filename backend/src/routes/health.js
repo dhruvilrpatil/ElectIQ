@@ -5,6 +5,11 @@ import openaiService from '../services/openaiService.js';
 const router = Router();
 const startTime = Date.now();
 
+/**
+ * Returns API health status, uptime, and service availability.
+ * @param {Object} req 
+ * @param {Object} res 
+ */
 router.get('/', (req, res) => {
   res.json({
     status: 'ok',

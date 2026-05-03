@@ -3,6 +3,12 @@ import { classifyIntent } from '../utils/intentClassifier.js';
 
 const rotationMap = {};
 
+/**
+ * Processes natural language input to determine intent and retrieve a response.
+ * @param {string} input 
+ * @param {string|null} context 
+ * @returns {Object} An object containing the matched intent, confidence score, and selected response.
+ */
 export function process(input, context = null) {
   if (!input?.trim()) {
     const def = knowledgeBase.default.responses[0];

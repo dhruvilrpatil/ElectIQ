@@ -1,7 +1,4 @@
-/**
- * Indian State Election Guide — ECI Data
- * voterIdType: 'epic' | 'alternative-12' | 'aadhaar-accepted'
- */
+// Defines detailed election rules, demographics, and contact info for Indian states.
 export const stateData = {
   MH: {
     name: 'Maharashtra',
@@ -258,6 +255,7 @@ export const stateData = {
   },
 };
 
+// Lists all available states mapped by their abbreviation codes.
 export const allStates = [
   { code: 'AP', name: 'Andhra Pradesh' },
   { code: 'BR', name: 'Bihar' },

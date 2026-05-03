@@ -1,82 +1,60 @@
-import fetch from 'node-fetch';
-import NodeCache from 'node-cache';
-import logger from '../middleware/logger.js';
+import axios from 'axios';
+import config from '../config/env.js';
+import { ECI_SEARCH_SITE, SEARCH_CACHE_TTL_MS } from '../config/constants.js';
+import cacheService from './cacheService.js';
+import logger from '../utils/logger.js';
+import { AppError } from '../middleware/errorHandler.js';
 
-const cache = new NodeCache({ stdTTL: 1800 }); // 30 minutes
+/**
+ * Queries the Google Custom Search API restricted to site:eci.gov.in.
+ *
 
-const searchOfficialSources = async (query) => {
-  if (!query || typeof query !== 'string') {
-    throw new Error('Query is required and must be a string');
-  }
+ * @param {string} query - The search query.
+ * @returns {Promise<Array<{title: string, snippet: string, link: string}>>}
+ */
+export async function searchECI(query) {
+  const cacheKey = `search:${query.toLowerCase().trim()}`;
 
-  const cleanQuery = query.trim();
-  if (cleanQuery.length < 3) {
-    throw new Error('Query must be at least 3 characters long');
-  }
-  if (cleanQuery.length > 200) {
-      throw new Error('Query must be less than 200 characters');
-  }
-
-  const cacheKey = `search_${cleanQuery}`;
-  const cachedResult = cache.get(cacheKey);
-
-  if (cachedResult) {
-    return { ...cachedResult, cached: true };
-  }
-
-  const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
-  const cseId = process.env.GOOGLE_CSE_ID;
-
-  if (!apiKey || apiKey === 'YOUR_SEARCH_KEY_HERE' || !cseId || cseId === 'YOUR_CSE_ID_HERE') {
-      logger.warn('Google Custom Search API key or CSE ID not configured.');
-      return { results: [], query: cleanQuery, message: "Search disabled (no API key)" };
+  const cached = cacheService.get(cacheKey);
+  if (cached !== undefined) {
+    logger.info('Search: cache hit', { query });
+    return cached;
   }
 
   try {
-    const url = new URL('https://www.googleapis.com/customsearch/v1');
-    url.searchParams.append('key', apiKey);
-    url.searchParams.append('cx', cseId);
-    url.searchParams.append('q', cleanQuery);
-    url.searchParams.append('num', '5');
-    url.searchParams.append('dateRestrict', 'y1');
+    const response = await axios.get('https://www.googleapis.com/customsearch/v1', {
+      params: {
+        key: config.csApiKey,
+        cx: config.csCx,
+        q: `${query} ${ECI_SEARCH_SITE}`,
+        num: 5,
+      },
+      timeout: 10000,
+    });
 
-    const response = await fetch(url);
+    const items = response.data.items || [];
+    const results = items.map((item) => ({
+      title: item.title,
+      snippet: item.snippet,
+      link: item.link,
+    }));
 
-    if (!response.ok) {
-        if (response.status === 429) {
-            throw new Error('Search API rate limit exceeded', { cause: 429 });
-        }
-        const errorData = await response.text();
-        throw new Error(`Search API error: ${response.status} ${errorData}`, { cause: response.status });
+    cacheService.set(cacheKey, results, SEARCH_CACHE_TTL_MS);
+    return results;
+  } catch (err) {
+    logger.error('Search service error', {
+      message: err.message?.slice(0, 200),
+      status: err.response?.status,
+    });
+
+    if (err.response?.status === 403) {
+      throw new AppError('Search API access denied.', 403, 'SEARCH_FORBIDDEN');
     }
-
-    const data = await response.json();
-    
-    let results = [];
-    if (data.items && data.items.length > 0) {
-        results = data.items.map(item => ({
-            title: item.title,
-            snippet: item.snippet,
-            link: item.link,
-            displayLink: item.displayLink
-        }));
+    if (err.response?.status === 429) {
+      throw new AppError('Search API rate limit exceeded.', 429, 'SEARCH_QUOTA_EXCEEDED');
     }
-
-    const resultObj = {
-        results,
-        query: cleanQuery,
-        ...(results.length === 0 && { message: "No official sources found" })
-    };
-
-    cache.set(cacheKey, resultObj);
-    return { ...resultObj, cached: false };
-
-  } catch (error) {
-    logger.error('Search service error:', { error: error.message });
-    throw error;
+    throw new AppError('Search service temporarily unavailable.', 503, 'SEARCH_ERROR');
   }
-};
+}
 
-export default {
-  searchOfficialSources,
-};
+export default { searchECI };

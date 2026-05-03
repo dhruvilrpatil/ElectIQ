@@ -3,6 +3,11 @@ import stateData from '../data/stateData.js';
 
 const router = Router();
 
+/**
+ * Retrieves a summary list of all states and their basic voting rules.
+ * @param {Object} req 
+ * @param {Object} res 
+ */
 router.get('/', (req, res) => {
   const summaries = Object.entries(stateData).map(([code, s]) => ({
     code,
@@ -15,6 +20,11 @@ router.get('/', (req, res) => {
   res.json(summaries);
 });
 
+/**
+ * Retrieves detailed voting information for a specific state code.
+ * @param {Object} req 
+ * @param {Object} res 
+ */
 router.get('/:code', (req, res) => {
   const code = req.params.code.toUpperCase();
   const state = stateData[code];

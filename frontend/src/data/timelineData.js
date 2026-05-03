@@ -1,6 +1,4 @@
-/**
- * Indian General Election 2024 Timeline
- */
+// Details the timeline of events for the Indian General Election 2024.
 const timelineData = [
   {
     id: 1,

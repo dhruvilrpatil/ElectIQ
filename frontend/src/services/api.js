@@ -1,71 +1,85 @@
-import axios from 'axios';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+/**
+ * Generic fetch wrapper with error handling.
+ * @param {string} url
+ * @param {RequestInit} options
+ * @returns {Promise<any>}
+ */
+async function request(url, options = {}) {
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${url}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    });
+  } catch {
+    throw new Error('Network error. Check your connection.');
+  }
 
-const client = axios.create({
-  baseURL: BASE_URL,
-  timeout: 30000,
-  headers: { 'Content-Type': 'application/json' },
-});
+  if (!response.ok) {
+    let errorMessage = 'An error occurred.';
+    try {
+      const body = await response.json();
+      errorMessage = body.error || errorMessage;
+    } catch {
+      /* use default */
+    }
+    throw new Error(errorMessage);
+  }
 
-const apiService = {
-  async sendChat(message, context = null, languageCode = 'en') {
-    const { data } = await client.post('/api/chat', { message, context, languageCode });
-    return data;
-  },
-  async getStates() {
-    const { data } = await client.get('/api/states');
-    return data;
-  },
-  async getState(code) {
-    const { data } = await client.get(`/api/states/${code}`);
-    return data;
-  },
-  async healthCheck() {
-    const { data } = await client.get('/api/health');
-    return data;
-  },
+  return response.json();
+}
 
-  /**
-   * Translate text to a target language using Google Translate API v2.
-   * @param {string} text - Text to translate
-   * @param {string} targetLang - ISO 639-1 target language code (e.g. 'hi', 'bn')
-   * @returns {Promise<{translatedText: string, detectedSourceLanguage: string, targetLang: string, cached: boolean}>}
-   */
-  async translateText(text, targetLang) {
-    const { data } = await client.post('/api/translate', { text, targetLang });
-    return data;
-  },
+/**
+ * Sends a message to the ElectIQ chat endpoint.
+ * @param {string} message - Sanitised user message.
+ * @param {Array} history - Conversation history.
+ * @param {string} language - BCP-47 language code.
+ * @param {AbortSignal} [signal] - Optional abort signal.
+ * @returns {Promise<{response: string}>}
+ */
+export async function sendChatMessage(message, history, language, signal) {
+  return request('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, history, language }),
+    signal,
+  });
+}
 
-  /**
-   * Get list of supported translation languages.
-   * @returns {Promise<{languages: Object}>}
-   */
-  async getLanguages() {
-    const { data } = await client.get('/api/translate/languages');
-    return data;
-  },
+/**
+ * Searches ECI documents via Google Custom Search.
+ * @param {string} query - Search term.
+ * @param {AbortSignal} [signal] - Optional abort signal.
+ * @returns {Promise<{results: Array<{title, snippet, link}>}>}
+ */
+export async function searchECIDocuments(query, signal) {
+  return request(`/api/search?q=${encodeURIComponent(query)}`, { signal });
+}
 
-  /**
-   * Search official Indian election sources.
-   * @param {string} query - Search query
-   * @param {string} [lang='en'] - Language hint
-   * @returns {Promise<{results: Array, totalResults: string, cached: boolean}>}
-   */
-  async searchSources(query, lang = 'en') {
-    const { data } = await client.get('/api/search', { params: { q: query, lang } });
-    return data;
-  },
+/**
+ * Fetches educational YouTube videos for a topic.
+ * @param {string} topic - Topic keyword.
+ * @param {AbortSignal} [signal] - Optional abort signal.
+ * @returns {Promise<{quotaExceeded: boolean, results: Array}>}
+ */
+export async function fetchYoutubeVideos(topic, signal) {
+  return request(`/api/youtube?topic=${encodeURIComponent(topic)}`, { signal });
+}
 
-  /**
-   * Fetch educational YouTube videos for a topic.
-   * @param {string} query
-   * @returns {Promise<Array>}
-   */
-  async getYoutubeVideos(query) {
-    const { data } = await client.get('/api/youtube', { params: { q: query } });
-    return data;
-  },
-};
+/**
+ * Translates UI strings via the backend translation endpoint.
+ * @param {string[]} strings - English strings to translate.
+ * @param {string} targetLang - Target language code.
+ * @param {AbortSignal} [signal] - Optional abort signal.
+ * @returns {Promise<{translations: string[]}>}
+ */
+export async function translateUIStrings(strings, targetLang, signal) {
+  return request('/api/translate', {
+    method: 'POST',
+    body: JSON.stringify({ strings, targetLang }),
+    signal,
+  });
+}
 
-export default apiService;
+export default { sendChatMessage, searchECIDocuments, fetchYoutubeVideos, translateUIStrings };

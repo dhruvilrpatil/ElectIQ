@@ -1,0 +1,20 @@
+{
+  "short_name": "ElectIQ",
+  "name": "ElectIQ - Indian Election Assistant",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0061a4",
+  "background_color": "#fdfcff",
+  "description": "AI-powered assistant for Indian elections, ECI procedures, and voter rights.",
+  "orientation": "portrait-primary",
+  "dir": "ltr",
+  "lang": "en"
+}

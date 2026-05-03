@@ -1,3 +1,4 @@
+// Contains data detailing the various voting methods available in Indian elections.
 const votingMethodsData = [
   {
     id: 'polling-booth',

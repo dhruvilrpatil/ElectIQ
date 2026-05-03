@@ -2,6 +2,12 @@ import knowledgeBase from '../data/knowledgeBase.js';
 
 
 
+/**
+ * Classifies the intent of a user's input based on predefined keywords.
+ * @param {string} input 
+ * @param {string|null} context 
+ * @returns {Object} An object containing the matched intent and confidence score.
+ */
 export function classifyIntent(input, context = null) {
   const inputLower = input.toLowerCase();
   let bestIntent = 'default';

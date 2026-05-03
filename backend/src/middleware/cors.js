@@ -1,3 +1,6 @@
+/**
+ * Configures CORS options allowing only the designated frontend origin.
+ */
 export const corsOptions = {
   origin: (origin, callback) => {
     // No origin = same-origin request (server-to-server or curl) — reject if we must, but usually we allow local server calls. 

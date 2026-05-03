@@ -1,35 +1,36 @@
 import 'dotenv/config';
 
 /**
- * Validates the presence of required environment variables.
- * @throws {Error} If any required environment variable is missing.
+ * Validates that a required environment variable is set and non-empty.
+ * @param {string} name - The environment variable name.
+ * @returns {string} The validated value.
+ * @throws {Error} If the variable is missing or empty.
  */
-export function validateEnv() {
-  const required = [
-    'FRONTEND_URL',
-    'GEMINI_API_KEY',
-    'GOOGLE_CSE_API_KEY',
-    'GOOGLE_CSE_CX',
-    'YOUTUBE_API_KEY',
-    'GOOGLE_TRANSLATE_API_KEY'
-  ];
-
-  const missing = required.filter(key => !process.env[key]);
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value || value.trim() === '') {
+    throw new Error(
+      `Missing required environment variable: ${name}. ` +
+        'See backend/.env.example for the full list of required variables.'
+    );
   }
+  return value.trim();
 }
 
-// Automatically validate when imported
-validateEnv();
-
-export const config = {
-  port: process.env.PORT || 3001,
+/**
+ * Frozen configuration object — the ONLY place process.env is read.
+ * Import this object everywhere else instead of reading process.env directly.
+ */
+const config = Object.freeze({
+  geminiApiKey: requireEnv('GEMINI_API_KEY'),
+  csApiKey: requireEnv('GOOGLE_CSE_API_KEY'),
+  csCx: requireEnv('GOOGLE_CSE_CX'),
+  youtubeApiKey: requireEnv('YOUTUBE_API_KEY'),
+  translateApiKey: requireEnv('GOOGLE_TRANSLATE_API_KEY'),
+  frontendUrl: requireEnv('FRONTEND_URL'),
+  port: process.env.PORT || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',
-  frontendUrl: process.env.FRONTEND_URL,
-  geminiApiKey: process.env.GEMINI_API_KEY,
-  googleCseApiKey: process.env.GOOGLE_CSE_API_KEY,
-  googleCseCx: process.env.GOOGLE_CSE_CX,
-  youtubeApiKey: process.env.YOUTUBE_API_KEY,
-  googleTranslateApiKey: process.env.GOOGLE_TRANSLATE_API_KEY
-};
+});
+
+export { config };
+export default config;

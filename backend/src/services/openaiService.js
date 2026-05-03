@@ -18,8 +18,19 @@ Respond ONLY with valid JSON using this exact schema:
 {"headline":"string","body":"string","steps":["string"],"actions":[{"label":"string","url":"string"}],"followUps":["string"]}`;
 
 export const openaiService = {
+  /**
+   * Checks if the OpenAI API key is configured.
+   * @returns {boolean} True if the API key is present.
+   */
   isAvailable: () => openai !== null,
 
+  /**
+   * Processes a chat request using the OpenAI API.
+   * @param {string} userMessage 
+   * @param {string|null} context 
+   * @returns {Promise<Object>} JSON response parsed from the model output.
+   * @throws {Error} If OpenAI is not configured or returns invalid JSON.
+   */
   async chat(userMessage, context = null) {
     if (!openai) throw new Error('OpenAI not configured');
 

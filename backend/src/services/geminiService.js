@@ -1,140 +1,94 @@
-//geminiService.js
-import { GoogleGenAI } from '@google/genai';
-import fs from 'fs';
-import path from 'path';
-import logger from '../middleware/logger.js';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import config from '../config/env.js';
+import {
+  GEMINI_MODEL_NAME,
+  SYSTEM_PROMPT_TEMPLATE,
+  CACHE_TTL_MS,
+} from '../config/constants.js';
+import cacheService from './cacheService.js';
+import { hashPrompt } from '../utils/hashUtil.js';
+import logger from '../utils/logger.js';
+import { AppError } from '../middleware/errorHandler.js';
 
-const SYSTEM_PROMPT = `You are ElectIQ — the official AI guide to Indian elections, built in compliance with Election Commission of India (ECI) guidelines.
-Base ALL answers strictly on:
-1. Representation of the People Act, 1951 (as amended through 2024)
-2. ECI notifications and circulars from 2024 General Election (Lok Sabha 18th)
-3. Current voter portal: voters.eci.gov.in
-4. e-EPIC as the primary digital voter ID standard
-5. Lok Sabha 2024: 7 phases (April 19 – June 1), Results: June 4, 2024. NDA won 293 seats. Next General Election: 2029.
-
-Always recommend users verify at voters.eci.gov.in or call 1950.
-Never speculate. Be neutral. Do not comment on political parties or candidates.
-Respond ONLY as valid JSON (no markdown fences): {"headline":"...","body":"...","steps":[],"actions":[{"label":"...","url":"..."}],"followUps":[]}`;
-
-// Models to try in order of preference
-const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-001'];
-
-/* ─── Resolve service-account credentials to absolute path ─────────── */
-const rawCredPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-if (rawCredPath) {
-  const absCredPath = path.isAbsolute(rawCredPath)
-    ? rawCredPath
-    : path.resolve(process.cwd(), rawCredPath);
-  if (fs.existsSync(absCredPath)) {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = absCredPath;
-    logger.info('Gemini: credentials resolved', { path: absCredPath });
-  } else {
-    logger.warn('Gemini: credentials file not found', { path: absCredPath });
-  }
-}
-
-/* ─── Read project ID from service-account key ─────────────────────── */
-let vertexProjectId = process.env.GOOGLE_CLOUD_PROJECT || 'electiq-494420';
-try {
-  const credFile = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (credFile && fs.existsSync(credFile)) {
-    vertexProjectId = JSON.parse(fs.readFileSync(credFile, 'utf8')).project_id || vertexProjectId;
-  }
-} catch { /* use default */ }
-
-/* ─── Build client list (Vertex AI first — has quota; API-key second) ─ */
-const clients = [];
-
-// 1) Vertex AI via service account (preferred — no free-tier rate limits)
-try {
-  const vertexClient = new GoogleGenAI({
-    vertexai: true,
-    project: vertexProjectId,
-    location: 'us-central1',
-  });
-  clients.push({ label: 'VertexAI', client: vertexClient });
-  logger.info('Gemini: Vertex AI client ready', { project: vertexProjectId });
-} catch (err) {
-  logger.warn('Gemini: Vertex AI init failed', { error: err.message });
-}
-
-// 2) API key via Google AI Studio (fallback — may hit free-tier limits)
-const apiKey = process.env.GEMINI_API_KEY;
-if (apiKey && apiKey.trim()) {
-  try {
-    const apiKeyClient = new GoogleGenAI({ apiKey: apiKey.trim() });
-    clients.push({ label: 'AI-Studio', client: apiKeyClient });
-    logger.info('Gemini: AI Studio client ready (API key)');
-  } catch (err) {
-    logger.warn('Gemini: AI Studio init failed', { error: err.message });
-  }
-}
-
-if (clients.length === 0) {
-  logger.error('Gemini: NO clients available — chatbot will not work');
-}
+const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 
 /**
- * Send a message to Gemini and parse the JSON response.
- * Tries every client × model combination until one succeeds.
- * @param {string} userMessage - The user's query
- * @param {string} [context=null] - Optional conversation context
- * @param {string} [languageCode='en'] - Optional language code for response
- * @returns {Promise<Object>} The parsed AI response
+ * Sends a user message to the Gemini API with full conversation history.
+
+ * @param {string} sanitisedMessage - The user's sanitised input.
+ * @param {Array<{role: string, parts: Array}>} history - Prior turns.
+ * @param {string} languageCode - BCP-47 language code (e.g., 'hi', 'ta').
+ * @param {boolean} streaming - Whether to return a stream.
+ * @returns {Promise<string|object>} The model's response text or stream.
  */
-export async function chat(userMessage, context = null, languageCode = 'en') {
-  const contextHint = context && context !== 'default'
-    ? `\n[Conversation context: user was asking about "${context}"]`
-    : '';
-  const langHint = languageCode && languageCode !== 'en' 
-    ? `\nCRITICAL INSTRUCTION: You MUST respond in the language corresponding to the language code '${languageCode}'.`
-    : '';
-  const prompt = userMessage + contextHint + langHint;
+export async function chat(sanitisedMessage, history = [], languageCode = 'en', streaming = false) {
+  // Build system prompt with language injected
+  const systemPrompt = SYSTEM_PROMPT_TEMPLATE.replace('{languageCode}', languageCode);
 
-  for (const { label, client } of clients) {
-    for (const modelName of MODELS) {
-      try {
-        const result = await client.models.generateContent({
-          model: modelName,
-          contents: prompt,
-          config: {
-            systemInstruction: SYSTEM_PROMPT,
-          },
-        });
+  // Build cache key from message + language + last 4 history turns
+  const recentHistory = history.slice(-4);
+  const cacheKey = hashPrompt(
+    sanitisedMessage + languageCode + JSON.stringify(recentHistory)
+  );
 
-        const rawText = result.text;
-        if (!rawText) continue;
-
-        logger.info('Gemini: success', { backend: label, model: modelName });
-
-        // Strip optional markdown code fences before JSON.parse
-        const cleaned = rawText.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
-
-        try {
-          return JSON.parse(cleaned);
-        } catch {
-          // Model returned plain text — wrap so frontend gets correct shape
-          return {
-            headline: 'ElectIQ',
-            body: rawText.trim(),
-            steps: [],
-            actions: [{ label: 'Verify at ECI', url: 'https://voters.eci.gov.in' }],
-            followUps: [],
-          };
-        }
-      } catch (err) {
-        logger.warn(`Gemini [${label}/${modelName}] failed`, {
-          error: err.message?.slice(0, 200) || String(err),
-          status: err.status || '',
-        });
-        // continue to next model / client
-      }
+  // Check cache (only for non-streaming requests)
+  if (!streaming) {
+    const cached = cacheService.get(cacheKey);
+    if (cached !== undefined) {
+      logger.info('Gemini: cache hit');
+      return cached;
     }
   }
 
-  throw new Error('All Gemini backends failed. Check API key quota and Vertex AI access.');
+  try {
+    const model = genAI.getGenerativeModel({
+      model: GEMINI_MODEL_NAME,
+      systemInstruction: systemPrompt,
+    });
+
+    const chatSession = model.startChat({
+      history: history.map((msg) => ({
+        role: msg.role,
+        parts: msg.parts || [{ text: msg.content || '' }],
+      })),
+    });
+
+    if (streaming) {
+      const result = await chatSession.sendMessageStream(sanitisedMessage);
+      return result.stream;
+    }
+
+    const result = await chatSession.sendMessage(sanitisedMessage);
+    const responseText = result.response.text();
+
+    // Cache the successful result
+    cacheService.set(cacheKey, responseText, CACHE_TTL_MS);
+
+    return responseText;
+  } catch (err) {
+    logger.error('Gemini API error', {
+      message: err.message?.slice(0, 200),
+      status: err.status || err.code,
+    });
+
+    // Map Gemini errors to AppError types — never expose raw messages
+    const status = err.status || err.code || 0;
+    const msg = (err.message || '').toLowerCase();
+
+    if (status === 429 || msg.includes('resource_exhausted') || msg.includes('quota')) {
+      throw new AppError('AI rate limit exceeded. Please try again later.', 429, 'AI_QUOTA_EXCEEDED');
+    }
+    if (status === 400 || msg.includes('invalid_argument') || msg.includes('invalid')) {
+      throw new AppError('Invalid request to AI service.', 400, 'INVALID_REQUEST');
+    }
+    throw new AppError('AI service is temporarily unavailable.', 503, 'AI_SERVICE_ERROR');
+  }
 }
 
-export const isAvailable = () => clients.length > 0;
+/**
+ * Checks if the Gemini API key is configured.
+ * @returns {boolean} True if the API key is present.
+ */
+export const isAvailable = () => Boolean(config.geminiApiKey);
 
 export default { chat, isAvailable };

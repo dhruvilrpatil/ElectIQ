@@ -1,3 +1,8 @@
+/**
+ * Formats the NLP or AI response into a standardized JSON structure.
+ * @param {Object} params 
+ * @returns {Object} The formatted response payload.
+ */
 export function formatResponse({ intent, confidence, response, meta = {} }) {
   return {
     intent,

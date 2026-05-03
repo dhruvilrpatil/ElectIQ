@@ -1,8 +1,4 @@
-/**
- * ElectIQ India — NLP Knowledge Base
- * All intents are based on Indian electoral processes and the
- * Election Commission of India (ECI) guidelines.
- */
+// Defines predefined intents and responses for the NLP knowledge base.
 const knowledgeBase = {
 
   // ──────────────────────────────────────────────────────────────

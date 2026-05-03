@@ -14,6 +14,12 @@ const INDIA_STATE_CODES = {
 };
 
 
+/**
+ * Classifies the intent of a user's input based on predefined keywords in the knowledge base.
+ * @param {string} input - The user's message.
+ * @param {string|null} [context=null] - Optional previous intent context to boost scoring.
+ * @returns {Object} An object containing the intent name, confidence score, and detected state code.
+ */
 export function classifyIntent(input, context = null) {
   const inputLower = input.toLowerCase();
   let bestIntent = 'default';

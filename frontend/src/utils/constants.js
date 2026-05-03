@@ -1,3 +1,4 @@
+// Defines static data including legislative seat configurations and supported languages.
 export const SEAT_DATA = {
   "Lok Sabha": {
     total: 543,

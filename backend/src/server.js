@@ -1,113 +1,95 @@
-import { config } from './config/env.js';
+// 1. Import config FIRST — validates env vars before anything else
+import config from './config/env.js';
+
 import express from 'express';
-import cors from 'cors';
 import helmet from 'helmet';
+import cors from 'cors';
 import compression from 'compression';
 
-import { corsOptions } from './middleware/cors.js';
-import { rateLimiter } from './middleware/rateLimiter.js';
+import { globalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { requestLogger } from './middleware/logger.js';
-import logger from './middleware/logger.js';
+import logger from './utils/logger.js';
 
-import chatRoutes from './routes/chat.js';
-import stateRoutes from './routes/states.js';
-import healthRoutes from './routes/health.js';
-import translateRoutes from './routes/translate.js';
-import searchRoutes from './routes/search.js';
-import youtubeRoutes from './routes/youtube.js';
+import chatRouter from './routes/chat.js';
+import searchRouter from './routes/search.js';
+import youtubeRouter from './routes/youtube.js';
+import translateRouter from './routes/translate.js';
 
+// 2. Express app init
 const app = express();
-const PORT = config.port;
 
-// Trust the reverse proxy (Cloud Run) so rate limiters and real IP resolution work
+// Trust reverse proxy (Cloud Run, nginx)
 app.set('trust proxy', 1);
 
-// Security & performance middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", 'https://fonts.googleapis.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'],
+// 3. Helmet with full CSP
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        frameSrc: ['https://www.youtube.com', 'https://www.youtube-nocookie.com'],
+        imgSrc: ["'self'", 'data:', 'https://i.ytimg.com'],
+        connectSrc: ["'self'"],
+      },
     },
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
-  frameguard: {
-    action: 'deny', // Will be overridden per route if needed, or we just keep it deny since API shouldn't be framed
-  },
-  referrerPolicy: {
-    policy: 'strict-origin-when-cross-origin',
-  },
-  noSniff: true,
-}));
+  })
+);
+
+// 4. CORS
+app.use(
+  cors({
+    origin: config.frontendUrl,
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type'],
+  })
+);
+
+// 5. Compression
 app.use(compression());
-app.use(cors(corsOptions));
 
+// 6. Body parsing
 app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: false }));
 
-// Logging
-app.use(requestLogger);
+// 7. Global rate limiter
+app.use(globalLimiter);
 
-// Rate limiting
-app.use('/api/', rateLimiter);
+// 8. Routes
+app.use('/api/chat', chatRouter);
+app.use('/api/search', searchRouter);
+app.use('/api/youtube', youtubeRouter);
+app.use('/api/translate', translateRouter);
 
-// Routes
-app.use('/api/health', healthRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/states', stateRoutes);
-app.use('/api/translate', translateRoutes);
-app.use('/api/search', searchRoutes);
-app.use('/api/youtube', youtubeRoutes);
-
-// 404 handler for API routes
-app.use('/api', (req, res) => {
-  res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
+// 9. 404 handler for unmatched routes
+app.use((req, res) => {
+  res.status(404).json({ error: `Route ${req.method} ${req.path} not found.` });
 });
 
-// Serve frontend in production
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../../frontend/dist')));
-  app.use((req, res) => {
-    res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
-  });
-} else {
-  // 404 handler for non-API routes in development
-  app.use((req, res) => {
-    res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
-  });
-}
-
-// Global error handler
+// 10. Error handler middleware LAST
 app.use(errorHandler);
 
-// Start server
-const server = app.listen(PORT, () => {
-  logger.info(`🗳  ElectIQ API running on http://localhost:${PORT}`);
-  logger.info(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+// 11. Start server & graceful shutdown
+const server = app.listen(config.port, () => {
+  logger.info(`ElectIQ API running on http://localhost:${config.port}`);
+  logger.info(`Environment: ${config.nodeEnv}`);
 });
 
-// Graceful shutdown
+/**
+ * Shuts down the server gracefully upon receiving a termination signal.
+ * @param {string} signal 
+ */
 function shutdown(signal) {
   logger.info(`${signal} received — shutting down gracefully`);
   server.close(() => {
     logger.info('Server closed');
     process.exit(0);
   });
-  setTimeout(() => { logger.error('Force exit'); process.exit(1); }, 10000);
+  setTimeout(() => {
+    logger.error('Forced exit after timeout');
+    process.exit(1);
+  }, 10000);
 }
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));

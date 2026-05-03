@@ -1,3 +1,4 @@
+// Contains voting rules and deadlines for various US states.
 const stateData = {
   CA: { name:'California', voterIdType:'none', voterIdLabel:'No ID Required', registrationDeadline:15, earlyVoting:true, earlyVotingDays:29, mailIn:true, mailInLabel:'Universal Vote-by-Mail', pollingHours:'7:00 AM – 8:00 PM', officialSite:'https://www.sos.ca.gov/elections' },
   TX: { name:'Texas', voterIdType:'strict-photo', voterIdLabel:'Strict Photo ID', registrationDeadline:30, earlyVoting:true, earlyVotingDays:17, mailIn:false, mailInLabel:'Excuse Required', pollingHours:'7:00 AM – 7:00 PM', officialSite:'https://www.sos.state.tx.us/elections' },

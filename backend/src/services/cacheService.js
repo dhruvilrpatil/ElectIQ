@@ -1,27 +1,53 @@
-import NodeCache from 'node-cache';
+import { LRUCache } from 'lru-cache';
+import { CACHE_MAX_ENTRIES } from '../config/constants.js';
 
-const cache = new NodeCache({ stdTTL: Number(process.env.CACHE_TTL) || 3600, checkperiod: 120 });
+/**
+ * Shared LRU cache instance.
+ * Max 100 entries. TTL is passed per-entry (chat vs YouTube have different TTLs).
+ */
+const cache = new LRUCache({
+  max: CACHE_MAX_ENTRIES,
+  allowStale: false,
+});
 
-let hits = 0, misses = 0;
+/**
+ * Retrieves a value from the LRU cache.
 
-function normalizeKey(key) {
-  return key.toLowerCase().trim().replace(/\s+/g, ' ');
+ * @param {string} key
+ * @returns {*|undefined}
+ */
+export function get(key) {
+  return cache.get(key);
 }
 
-export const cacheService = {
-  get(key) {
-    const val = cache.get(normalizeKey(key));
-    if (val !== undefined) { hits++; return val; }
-    misses++;
-    return null;
-  },
-  set(key, value, ttl) {
-    if (ttl) return cache.set(normalizeKey(key), value, ttl);
-    return cache.set(normalizeKey(key), value);
-  },
-  del(key) { return cache.del(normalizeKey(key)); },
-  flush() { cache.flushAll(); },
-  stats() { return { hits, misses, keys: cache.keys().length }; },
-};
+/**
+ * Stores a value in the LRU cache with a specific time-to-live.
 
-export default cacheService;
+ * @param {string} key
+ * @param {*} value
+ * @param {number} ttl - Time-to-live in milliseconds.
+ */
+export function set(key, value, ttl) {
+  cache.set(key, value, { ttl });
+}
+
+/**
+ * Checks whether a specific key exists in the LRU cache.
+
+ * @param {string} key
+ * @returns {boolean}
+ */
+export function has(key) {
+  return cache.has(key);
+}
+
+/**
+ * Removes a specific key from the LRU cache.
+
+ * @param {string} key
+ */
+export function del(key) {
+  cache.delete(key);
+}
+
+export default { get, set, has, del };

@@ -7,6 +7,9 @@ const logFormat = printf(({ level, message, timestamp, ...meta }) => {
   return `${timestamp} [${level}] ${message}${metaStr}`;
 });
 
+/**
+ * Configures the Winston logger with console and file transports.
+ */
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), logFormat),
@@ -19,6 +22,12 @@ const logger = winston.createLogger({
   ],
 });
 
+/**
+ * Middleware that logs incoming HTTP requests and their duration.
+ * @param {Object} req 
+ * @param {Object} res 
+ * @param {Function} next 
+ */
 export const requestLogger = (req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
